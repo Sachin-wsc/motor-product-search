@@ -15,13 +15,13 @@ async function main() {
     if (existingAdmins.length > 0) {
         console.log(`User ${email} already exists. Updating password...`);
         const passwordHash = await bcrypt.hash(password, 10);
-        await db.update(users).set({ passwordHash, role: "admin" }).where(eq(users.email, email));
+        await db.update(users).set({ password: passwordHash, role: "admin" }).where(eq(users.email, email));
         console.log("Password updated successfully.");
     } else {
         const passwordHash = await bcrypt.hash(password, 10);
         await db.insert(users).values({
             email,
-            passwordHash,
+            password: passwordHash,
             role: "admin",
         });
         console.log(`Super user ${email} created successfully.`);

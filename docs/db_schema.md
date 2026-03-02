@@ -6,7 +6,7 @@ This document outlines the core tables required for the Motor Driver platform, i
 Stores administrator credentials for accessing the dashboard.
 *   `id`: UUID (Primary Key)
 *   `email`: String (Unique)
-*   `password_hash`: String
+*   `password`: String
 *   `role`: String (e.g., 'admin', 'super_admin')
 *   `created_at`: Timestamp
 *   `updated_at`: Timestamp

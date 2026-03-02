@@ -15,8 +15,8 @@ export async function POST(request: Request) {
         }
 
         const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-
-        if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+        console.log(user);
+        if (!user || !(await bcrypt.compare(password, user.password))) {
             return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
         }
 

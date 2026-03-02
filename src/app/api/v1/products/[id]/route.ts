@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { products, productSpecs } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import path from "path";
+import { writeFile, mkdir } from "fs/promises";
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -20,15 +22,33 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
-        const body = await request.json();
+        const formData = await request.formData();
 
         // Build product update payload
         let productUpdate: any = { updatedAt: new Date() };
-        if (body.name !== undefined) productUpdate.name = body.name;
-        if (body.sku !== undefined) productUpdate.sku = body.sku;
-        if (body.summary !== undefined) productUpdate.summary = body.summary;
-        if (body.motorType !== undefined) productUpdate.motorType = body.motorType;
-        if (body.isActive !== undefined) productUpdate.isActive = body.isActive;
+
+        const name = formData.get("name") as string;
+        const sku = formData.get("sku") as string;
+        const summary = formData.get("summary") as string;
+        const motorType = formData.get("motorType") as string;
+        const isActiveStr = formData.get("isActive") as string;
+        const image = formData.get("image") as File;
+
+        if (name !== null) productUpdate.name = name;
+        if (sku !== null) productUpdate.sku = sku;
+        if (summary !== null) productUpdate.summary = summary;
+        if (motorType !== null) productUpdate.motorType = motorType;
+        if (isActiveStr !== null) productUpdate.isActive = isActiveStr === "true";
+
+        if (image && image.size > 0) {
+            const bytes = await image.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            const filename = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+            const uploadDir = path.join(process.cwd(), "public", "uploads");
+            await mkdir(uploadDir, { recursive: true });
+            await writeFile(path.join(uploadDir, filename), buffer);
+            productUpdate.imageUrl = `/uploads/${filename}`;
+        }
 
         const [updatedProduct] = await db.update(products)
             .set(productUpdate)
@@ -40,9 +60,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         }
 
         // Update specs if specs object is provided
+        const specsStr = formData.get("specs") as string;
         let updatedSpecs = null;
-        if (body.specs) {
-            const specUpdate = { ...body.specs };
+        if (specsStr) {
+            const specsObj = JSON.parse(specsStr);
+            const specUpdate = { ...specsObj };
             delete specUpdate.id;
             delete specUpdate.productId;
 

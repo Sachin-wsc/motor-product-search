@@ -25,6 +25,7 @@ export default function EditProductModal({
         summary: "",
         motorType: "BLDC",
     });
+    const [image, setImage] = useState<File | null>(null);
 
     const [specs, setSpecs] = useState({
         minVoltage: "",
@@ -57,6 +58,7 @@ export default function EditProductModal({
             } else {
                 setSpecs({ minVoltage: "", maxVoltage: "", maxContinuousCurrent: "", peakCurrent: "", ratedPower: "", maxRpm: "", weightKg: "" });
             }
+            setImage(null);
         }
     }, [product, open]);
 
@@ -70,10 +72,19 @@ export default function EditProductModal({
         );
 
         try {
+            const formDataObj = new FormData();
+            formDataObj.append("name", formData.name);
+            formDataObj.append("sku", formData.sku);
+            formDataObj.append("summary", formData.summary);
+            formDataObj.append("motorType", formData.motorType);
+            formDataObj.append("specs", JSON.stringify(processedSpecs));
+            if (image) {
+                formDataObj.append("image", image);
+            }
+
             const res = await fetch(`/api/v1/products/${product.id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...formData, specs: processedSpecs })
+                body: formDataObj
             });
 
             if (res.ok) {
@@ -130,6 +141,11 @@ export default function EditProductModal({
                     <div className="space-y-2">
                         <Label htmlFor="edit-summary">Summary</Label>
                         <Textarea id="edit-summary" value={formData.summary} onChange={e => setFormData({ ...formData, summary: e.target.value })} className="resize-none" rows={2} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-image">Product Image (Leave blank to keep current)</Label>
+                        <Input id="edit-image" type="file" accept="image/*" onChange={e => setImage(e.target.files?.[0] || null)} />
                     </div>
 
                     <div className="pt-4 border-t">

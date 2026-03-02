@@ -51,7 +51,7 @@ CREATE TABLE "products" (
 CREATE TABLE "users" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"email" varchar(255) NOT NULL,
-	"password_hash" text NOT NULL,
+	"password" text NOT NULL,
 	"role" varchar(50) DEFAULT 'admin' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,

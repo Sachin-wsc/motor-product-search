@@ -16,6 +16,7 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
         summary: "",
         motorType: "BLDC",
     });
+    const [image, setImage] = useState<File | null>(null);
 
     const [specs, setSpecs] = useState({
         minVoltage: "",
@@ -37,10 +38,19 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
         );
 
         try {
+            const formDataObj = new FormData();
+            formDataObj.append("name", formData.name);
+            formDataObj.append("sku", formData.sku);
+            formDataObj.append("summary", formData.summary);
+            formDataObj.append("motorType", formData.motorType);
+            formDataObj.append("specs", JSON.stringify(processedSpecs));
+            if (image) {
+                formDataObj.append("image", image);
+            }
+
             const res = await fetch("/api/v1/products", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...formData, specs: processedSpecs })
+                body: formDataObj
             });
 
             if (res.ok) {
@@ -48,6 +58,7 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                 setOpen(false);
                 setFormData({ name: "", sku: "", summary: "", motorType: "BLDC" });
                 setSpecs({ minVoltage: "", maxVoltage: "", maxContinuousCurrent: "", peakCurrent: "", ratedPower: "", maxRpm: "", weightKg: "" });
+                setImage(null);
                 onSuccess();
             } else {
                 toast.error("Failed to create product.");
@@ -102,6 +113,11 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                     <div className="space-y-2">
                         <Label htmlFor="summary">Summary</Label>
                         <Textarea id="summary" value={formData.summary} onChange={e => setFormData({ ...formData, summary: e.target.value })} className="resize-none" rows={2} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="image">Product Image</Label>
+                        <Input id="image" type="file" accept="image/*" onChange={e => setImage(e.target.files?.[0] || null)} />
                     </div>
 
                     <div className="pt-4 border-t">
