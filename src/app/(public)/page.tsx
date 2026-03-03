@@ -29,20 +29,20 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="relative min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center overflow-hidden">
+        <div className="relative min-h-[calc(100vh-10rem)] flex flex-col justify-center items-center overflow-hidden">
             {/* Background decoration */}
-            <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30"></div>
+            {/* <div className="absolute inset-0 z-0 bg-gradient-to-br from-blue-50/50 via-white to-blue-50/30"></div>
             <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl"></div>
-            <div className="absolute top-40 -left-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
+            <div className="absolute top-40 -left-40 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div> */}
 
-            <div className="container relative z-10 mx-auto px-4 py-16 text-center lg:py-32">
-                <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl/tight text-primary">
+            <div className="container relative z-10 mx-auto px-4 py-3 text-center lg:py-32">
+                <h1 className="font-extrabold tracking-tight sm:text-2xl md:text-4xl/tight text-primary">
                     Find the Perfect Motor Driver
                     <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">
                         For Your Engineering Needs
                     </span>
                 </h1>
-                <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground sm:text-xl">
+                <p className="mt-4 max-w-2xl mx-auto text-[10px] text-muted-foreground sm:text-[16px]">
                     Enter your mechanical and electrical constraints into our Smart Search Engine. Our mathematical model algorithm will instantly recommend the exact driver you need.
                 </p>
 

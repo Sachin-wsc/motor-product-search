@@ -75,7 +75,7 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
             <DialogTrigger asChild>
                 <Button className="bg-primary hover:bg-primary/90 text-white shadow-md transition-all">Add New Product</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] max-h-[100vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-primary text-xl">Add New Product</DialogTitle>
                     <DialogDescription>

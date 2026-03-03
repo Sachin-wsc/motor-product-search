@@ -18,15 +18,16 @@ export default function AdminEquations() {
         fetch("/api/v1/equations")
             .then(res => res.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    // Sort so active is on top
-                    const sorted = [...data].sort((a, b) => {
-                        if (a.isActive && !b.isActive) return -1;
-                        if (!a.isActive && b.isActive) return 1;
-                        return 0;
-                    });
-                    setEquations(sorted);
-                }
+                setEquations(data || []);
+                // if (Array.isArray(data)) {
+                //     // Sort so active is on top
+                //     const sorted = [...data].sort((a, b) => {
+                //         if (a.isActive && !b.isActive) return -1;
+                //         if (!a.isActive && b.isActive) return 1;
+                //         return 0;
+                //     });
+                //     setEquations(sorted);
+                // }
             })
             .finally(() => setLoading(false));
     };
@@ -97,14 +98,14 @@ export default function AdminEquations() {
                                         </TableCell>
                                         <TableCell className="text-sm text-muted-foreground max-w-md hidden md:table-cell truncate">{eq.description}</TableCell>
                                         <TableCell className="text-right px-6 flex justify-end items-center gap-2">
-                                            <Button
+                                            {!eq.isActive ? <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => toggleEquation(eq.id, eq.isActive)}
                                                 className={`transition-colors ${eq.isActive ? "border-red-200 text-red-600 hover:bg-red-50" : "border-green-200 text-green-600 hover:bg-green-50"}`}
                                             >
                                                 {eq.isActive ? "Deactivate" : "Activate"}
-                                            </Button>
+                                            </Button> : ""}
                                             <Button
                                                 variant="outline"
                                                 size="sm"

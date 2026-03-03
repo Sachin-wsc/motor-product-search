@@ -32,6 +32,8 @@ export default function AdminLogin() {
             }
 
             sessionStorage.setItem("token", data.token);
+            sessionStorage.setItem("user", JSON.stringify(data.user));
+            window.dispatchEvent(new Event("user-login"));
             toast.success("Logged in successfully");
             router.push("/admin/dashboard");
         } catch (error) {

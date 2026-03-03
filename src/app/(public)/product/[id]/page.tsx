@@ -1,6 +1,4 @@
-import { db } from "@/db";
-import { products, productSpecs } from "@/db/schema";
-import { eq } from "drizzle-orm";
+
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,13 +7,22 @@ import InquiryModal from "./inquiry-modal";
 
 export default async function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
-    const [product] = await db.select().from(products).where(eq(products.id, id));
 
-    if (!product) {
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const res = await fetch(`${baseUrl}/api/v1/products/${id}`, {
+        cache: 'no-store'
+    });
+
+    if (!res.ok) {
         notFound();
     }
 
-    const [specs] = await db.select().from(productSpecs).where(eq(productSpecs.productId, product.id));
+    const data = await res.json();
+    const { specs, ...product } = data;
+
+    if (!product || !product.id) {
+        notFound();
+    }
 
     return (
         <div className="container mx-auto px-4 py-8 max-w-6xl">

@@ -2,50 +2,48 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { db } from "@/db";
-import { products, productSpecs, equationConfigs } from "@/db/schema";
-import { eq, gte } from "drizzle-orm";
+
 
 export const dynamic = "force-dynamic";
 
 export default async function CatalogPage({
     searchParams,
 }: {
-    searchParams: Record<string, string | string[] | undefined>
+    searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-    const torque = searchParams?.torque as string;
-    const speed = searchParams?.speed as string;
+    const resolvedParams = await searchParams;
+    const torque = resolvedParams?.torque as string;
+    const speed = resolvedParams?.speed as string;
 
     let productsList: any[] = [];
 
     try {
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
         if (torque && speed) {
-            // Fetch active equation
-            const [activeEquation] = await db
-                .select()
-                .from(equationConfigs)
-                .where(eq(equationConfigs.isActive, true))
-                .limit(1);
+            // Call the Search API
+            const res = await fetch(`${baseUrl}/api/v1/engine/search?torque=${torque}&speed=${speed}`, {
+                cache: 'no-store'
+            });
 
-            const multiplier = activeEquation?.constantValue ? Number(activeEquation.constantValue) : 1.25;
-
-            // Smart search logic
-            const requiredPower = Number(torque) * Number(speed) * multiplier;
-
-            const matchingSpecs = await db
-                .select({
-                    product: products,
-                    specs: productSpecs
-                })
-                .from(productSpecs)
-                .innerJoin(products, eq(productSpecs.productId, products.id))
-                // @ts-ignore
-                .where(gte(productSpecs.ratedPower, requiredPower));
-
-            productsList = matchingSpecs.map(row => ({ ...row.product, specs: row.specs }));
+            if (res.ok) {
+                const data = await res.json();
+                productsList = data.results || [];
+            } else {
+                console.error("Failed to fetch search results");
+            }
         } else {
-            // Standard fetch all
-            productsList = await db.select().from(products);
+            // Standard fetch all API
+            const res = await fetch(`${baseUrl}/api/v1/products`, {
+                cache: 'no-store'
+            });
+            console.log("max-w-[360px] mx-auto w-full", res)
+            if (res.ok) {
+                const data = await res.json();
+                productsList = Array.isArray(data) ? data : (data.products || []);
+            } else {
+                console.error("Failed to fetch products");
+            }
         }
     } catch (err) {
         console.error(err);

@@ -3,9 +3,15 @@ import { db } from "@/db";
 import { equationConfigs } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
+import { desc } from "drizzle-orm";
+
 export async function GET() {
     try {
-        const configs = await db.select().from(equationConfigs);
+        const configs = await db
+            .select()
+            .from(equationConfigs)
+            .orderBy(desc(equationConfigs.createdAt));
+
         return NextResponse.json(configs);
     } catch (err: any) {
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

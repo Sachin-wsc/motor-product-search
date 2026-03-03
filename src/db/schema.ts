@@ -42,6 +42,7 @@ export const equationConfigs = pgTable("equation_configs", {
     constantValue: decimal("constant_value", { precision: 10, scale: 4 }),
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
