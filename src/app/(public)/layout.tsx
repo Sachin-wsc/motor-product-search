@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
+import Image from "next/image";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -12,10 +13,8 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
                 <div className="container max-w-[1600px] mx-auto flex items-center justify-between gap-4">
                     {/* Logo Pill */}
                     <Link href="/" className="bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 rounded-full pl-2 pr-6 py-1.5 flex items-center gap-3 shrink-0 group hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-                            <span className="text-white font-bold leading-none text-sm">M</span>
-                        </div>
-                        <span className="font-bold text-xl tracking-tight text-primary">MotorSelect</span>
+
+                        <Image src="/Logo-sqare.png" alt="Logo" width={150} height={120} />
                     </Link>
 
                     {/* Navigation Pill */}

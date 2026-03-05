@@ -1,20 +1,66 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { products, productSpecs } from "@/db/schema";
+import { products, productSpecs, companies, motorTypes, masterPoles, masterVoltages, masterFrequencies, masterApplications } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import path from "path";
 import { writeFile, mkdir } from "fs/promises";
+import { alias } from "drizzle-orm/pg-core";
+
+const acApplications = alias(masterApplications, "acApplications");
+const dcApplications = alias(masterApplications, "dcApplications");
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
-        const [product] = await db.select().from(products).where(eq(products.id, id));
-        if (!product) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-        const [specs] = await db.select().from(productSpecs).where(eq(productSpecs.productId, id));
+        let query = db
+            .select({
+                product: products,
+                specs: productSpecs,
+                companyName: companies.name,
+                motorTypeName: motorTypes.name,
+                poleNumber: masterPoles.poleNumber,
+                voltageValue: masterVoltages.voltageValue,
+                voltageUnit: masterVoltages.unit,
+                frequencyValue: masterFrequencies.frequencyValue,
+                frequencyUnit: masterFrequencies.unit,
+                acApplicationName: acApplications.name,
+                dcApplicationName: dcApplications.name,
+            })
+            .from(products)
+            .leftJoin(productSpecs, eq(products.id, productSpecs.productId))
+            .leftJoin(companies, eq(products.companyId, companies.id))
+            .leftJoin(motorTypes, eq(products.motorTypeId, motorTypes.id))
+            .leftJoin(masterPoles, eq(productSpecs.poleId, masterPoles.id))
+            .leftJoin(masterVoltages, eq(productSpecs.voltageId, masterVoltages.id))
+            .leftJoin(masterFrequencies, eq(productSpecs.frequencyId, masterFrequencies.id))
+            .leftJoin(acApplications, eq(productSpecs.acApplicationId, acApplications.id))
+            .leftJoin(dcApplications, eq(productSpecs.dcApplicationId, dcApplications.id))
+            .where(eq(products.id, id));
 
-        return NextResponse.json({ ...product, specs: specs || null });
+        const result = await query;
+
+        if (result.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+        const row = result[0];
+
+        return NextResponse.json({
+            ...row.product,
+            companyName: row.companyName,
+            motorTypeName: row.motorTypeName,
+            specs: row.specs ? {
+                ...row.specs,
+                poleNumber: row.poleNumber,
+                voltageValue: row.voltageValue,
+                voltageUnit: row.voltageUnit,
+                frequencyValue: row.frequencyValue,
+                frequencyUnit: row.frequencyUnit,
+                acApplicationName: row.acApplicationName,
+                dcApplicationName: row.dcApplicationName,
+            } : null
+        });
     } catch (err: any) {
+        console.error("GET /products/[id] error:", err);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -30,24 +76,53 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const name = formData.get("name") as string;
         const sku = formData.get("sku") as string;
         const summary = formData.get("summary") as string;
-        const motorType = formData.get("motorType") as string;
+        const companyId = formData.get("companyId") as string;
+        const motorTypeId = formData.get("motorTypeId") as string;
         const isActiveStr = formData.get("isActive") as string;
-        const image = formData.get("image") as File;
+        const formImages = formData.getAll("image") as File[];
+        const existingImagesStr = formData.get("existingImages") as string;
+
+        let finalImages: string[] = [];
+        let hasImagesField = false;
+
+        if (existingImagesStr !== null) {
+            hasImagesField = true;
+            try {
+                finalImages = JSON.parse(existingImagesStr);
+            } catch (e) {
+                console.error("Failed to parse existingImages", e);
+            }
+        }
 
         if (name !== null) productUpdate.name = name;
         if (sku !== null) productUpdate.sku = sku;
         if (summary !== null) productUpdate.summary = summary;
-        if (motorType !== null) productUpdate.motorType = motorType;
+        if (companyId !== null) productUpdate.companyId = companyId;
+        if (motorTypeId !== null) productUpdate.motorTypeId = motorTypeId;
         if (isActiveStr !== null) productUpdate.isActive = isActiveStr === "true";
 
-        if (image && image.size > 0) {
-            const bytes = await image.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-            const filename = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        if (formImages && formImages.length > 0) {
+            let uploadedImages: string[] = [];
             const uploadDir = path.join(process.cwd(), "public", "uploads");
             await mkdir(uploadDir, { recursive: true });
-            await writeFile(path.join(uploadDir, filename), buffer);
-            productUpdate.imageUrl = `/uploads/${filename}`;
+
+            for (const image of formImages) {
+                if (image && typeof image.arrayBuffer === "function" && image.size > 0) {
+                    const bytes = await image.arrayBuffer();
+                    const buffer = Buffer.from(bytes);
+                    const filename = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+                    await writeFile(path.join(uploadDir, filename), buffer);
+                    uploadedImages.push(`/uploads/${filename}`);
+                }
+            }
+            if (uploadedImages.length > 0) {
+                hasImagesField = true;
+                finalImages = [...finalImages, ...uploadedImages];
+            }
+        }
+
+        if (hasImagesField) {
+            productUpdate.images = finalImages;
         }
 
         const [updatedProduct] = await db.update(products)
@@ -64,9 +139,44 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         let updatedSpecs = null;
         if (specsStr) {
             const specsObj = JSON.parse(specsStr);
-            const specUpdate = { ...specsObj };
-            delete specUpdate.id;
-            delete specUpdate.productId;
+            const isAC = specsObj.isAC;
+
+            let specUpdate: any = {
+                isAC: isAC,
+            };
+
+            if (isAC) {
+                specUpdate.acKw = specsObj.acKw;
+                specUpdate.poleId = specsObj.poleId;
+                specUpdate.voltageId = specsObj.voltageId;
+                specUpdate.frequencyId = specsObj.frequencyId;
+                specUpdate.acApplicationId = specsObj.acApplicationId;
+                specUpdate.totalMotors = specsObj.totalMotors;
+                specUpdate.motorsPerGroup = specsObj.motorsPerGroup;
+
+                // Clear DC fields
+                specUpdate.dcArmatureVoltage = null;
+                specUpdate.dcKw = null;
+                specUpdate.dcFieldVoltage = null;
+                specUpdate.dcFieldCurrent = null;
+                specUpdate.dcApplicationId = null;
+            } else {
+                specUpdate.dcArmatureVoltage = specsObj.dcArmatureVoltage;
+                specUpdate.dcKw = specsObj.dcKw;
+                specUpdate.dcFieldVoltage = specsObj.dcFieldVoltage;
+                specUpdate.dcFieldCurrent = specsObj.dcFieldCurrent;
+                specUpdate.dcApplicationId = specsObj.dcApplicationId;
+
+                // Clear AC fields
+                specUpdate.acKw = null;
+                specUpdate.poleId = null;
+                specUpdate.voltageId = null;
+                specUpdate.frequencyId = null;
+                specUpdate.acApplicationId = null;
+                specUpdate.totalMotors = null;
+                specUpdate.motorsPerGroup = null;
+            }
+
 
             // Try to update existing specs
             const res = await db.update(productSpecs)

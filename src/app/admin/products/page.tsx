@@ -67,6 +67,7 @@ export default function AdminProducts() {
                             <TableRow>
                                 <TableHead className="font-semibold px-6">SKU / Part No</TableHead>
                                 <TableHead className="font-semibold">Name</TableHead>
+                                <TableHead className="font-semibold">Company</TableHead>
                                 <TableHead className="font-semibold">Motor Type</TableHead>
                                 <TableHead className="font-semibold">Status</TableHead>
                                 <TableHead className="text-right font-semibold px-6">Actions</TableHead>
@@ -75,18 +76,19 @@ export default function AdminProducts() {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24">Loading inventory...</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24">Loading inventory...</TableCell>
                                 </TableRow>
                             ) : products.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">No products found. Add your first driver.</TableCell>
+                                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">No products found. Add your first driver.</TableCell>
                                 </TableRow>
                             ) : (
                                 products.map((p) => (
                                     <TableRow key={p.id} className="hover:bg-secondary/10 transition-colors">
                                         <TableCell className="font-mono text-sm px-6">{p.sku}</TableCell>
                                         <TableCell className="font-medium text-primary">{p.name}</TableCell>
-                                        <TableCell>{p.motorType}</TableCell>
+                                        <TableCell>{p.companyName}</TableCell>
+                                        <TableCell>{p.motorTypeName}</TableCell>
                                         <TableCell>
                                             <Badge variant={p.isActive ? "default" : "secondary"} className={p.isActive ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}>
                                                 {p.isActive ? "Active" : "Archived"}

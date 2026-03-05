@@ -15,6 +15,20 @@
       "when": 1772451236922,
       "tag": "0001_huge_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772540623873,
+      "tag": "0002_freezing_jackpot",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772690532821,
+      "tag": "0003_sharp_thing",
+      "breakpoints": true
     }
   ]
 }

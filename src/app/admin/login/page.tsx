@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export default function AdminLogin() {
     const router = useRouter();
@@ -46,13 +47,11 @@ export default function AdminLogin() {
     return (
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
             <Card className="shadow-lg border-0">
-                <CardHeader className="space-y-1 text-center pb-8 border-b border-muted">
-                    <CardTitle className="text-2xl font-bold tracking-tight text-primary">Admin Sign In</CardTitle>
-                    <CardDescription>
-                        Enter your credentials to access the Motor Driver Catalog Dashboard
-                    </CardDescription>
+                <CardHeader className="space-y-1 text-center pb-1 ">
+                    <Image className="mx-auto" src="/Logo-sqare.png" alt="Logo" width={180} height={120} />
+                    <CardTitle className="text-2xl font-bold tracking-tight text-primary text-left">Log In</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
+                <CardContent className="">
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="email">Email</Label>

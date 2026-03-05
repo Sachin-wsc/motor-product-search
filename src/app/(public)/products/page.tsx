@@ -14,6 +14,10 @@ export default async function CatalogPage({
     const resolvedParams = await searchParams;
     const torque = resolvedParams?.torque as string;
     const speed = resolvedParams?.speed as string;
+    const motorTypeId = resolvedParams?.motorTypeId as string;
+    const applicationId = resolvedParams?.applicationId as string;
+    const voltageId = resolvedParams?.voltageId as string;
+    const frequencyId = resolvedParams?.frequencyId as string;
 
     let productsList: any[] = [];
 
@@ -22,7 +26,15 @@ export default async function CatalogPage({
 
         if (torque && speed) {
             // Call the Search API
-            const res = await fetch(`${baseUrl}/api/v1/engine/search?torque=${torque}&speed=${speed}`, {
+            const queryParams = new URLSearchParams();
+            queryParams.append('torque', torque);
+            queryParams.append('speed', speed);
+            if (motorTypeId) queryParams.append('motorTypeId', motorTypeId);
+            if (applicationId) queryParams.append('applicationId', applicationId);
+            if (voltageId) queryParams.append('voltageId', voltageId);
+            if (frequencyId) queryParams.append('frequencyId', frequencyId);
+
+            const res = await fetch(`${baseUrl}/api/v1/engine/search?${queryParams.toString()}`, {
                 cache: 'no-store'
             });
 
@@ -37,7 +49,6 @@ export default async function CatalogPage({
             const res = await fetch(`${baseUrl}/api/v1/products`, {
                 cache: 'no-store'
             });
-            console.log("max-w-[360px] mx-auto w-full", res)
             if (res.ok) {
                 const data = await res.json();
                 productsList = Array.isArray(data) ? data : (data.products || []);
@@ -75,12 +86,12 @@ export default async function CatalogPage({
                     productsList.map((product: any) => (
                         <Card key={product.id} className="flex flex-col group overflow-hidden border-secondary/20 hover:border-primary/40 transition-all hover:shadow-lg">
                             <div className="aspect-video w-full bg-secondary/20 flex items-center justify-center relative overflow-hidden">
-                                {product.imageUrl ? (
-                                    <img src={product.imageUrl} alt={product.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
+                                {product.images && product.images.length > 0 ? (
+                                    <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
                                 ) : (
                                     <div className="text-muted-foreground font-medium">No Image</div>
                                 )}
-                                <Badge className="absolute top-2 right-2 bg-white/90 text-primary shadow-sm hover:bg-white">{product.motorType}</Badge>
+                                <Badge className="absolute top-2 right-2 bg-white/90 text-primary shadow-sm hover:bg-white">{product.motorTypeName}</Badge>
                             </div>
                             <CardHeader className="pb-3 flex-1 pt-4">
                                 <div className="text-xs text-muted-foreground mb-1 font-mono">{product.sku}</div>

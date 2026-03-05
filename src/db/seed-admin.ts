@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 async function main() {
     console.log("Seeding super user...");
 
-    const email = "admin@example.com";
+    const email = "admin@drivermatch.com";
     const password = "admin";
 
     // Check if user exists

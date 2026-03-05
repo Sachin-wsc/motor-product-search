@@ -1,53 +1,58 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { products, productSpecs, equationConfigs } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { products, productSpecs, equationConfigs, companies, motorTypes } from "@/db/schema";
+import { eq, sql, and, or } from "drizzle-orm";
 
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { desiredTorque, desiredSpeed } = body;
+        const { desiredTorque, desiredSpeed, motorTypeId, applicationId, voltageId, frequencyId } = body;
 
         if (desiredTorque === undefined || desiredSpeed === undefined) {
             return NextResponse.json({ error: "Missing required mechanical parameters" }, { status: 400 });
         }
 
-        // Example naive logic: Power = Torque * Speed * Constant
-        // Normally, you'd fetch formulas from equationConfigs and safely evaluate them.
         const configs = await db.select().from(equationConfigs).where(eq(equationConfigs.isActive, true));
 
-        // Find the safety multiplier if it exists, otherwise default to 1
-        // Find the safety multiplier if it exists, otherwise use the first active equation or default to 1
         const safetyConfig = configs.find(c => c.keyName === 'safety_margin_multiplier' || c.keyName === 'Required Power') || configs[0];
         const safetyMultiplier = safetyConfig?.constantValue ? Number(safetyConfig.constantValue) : 1;
 
-        // Fake calculate required power 
-        const requiredPower = (Number(desiredTorque) * Number(desiredSpeed)) * safetyMultiplier;
+        // Naive Power Calculation: P (kW) = Torque (Nm) * Speed (RPM) / 9550 * Safety
+        const requiredPower = (Number(desiredTorque) * Number(desiredSpeed) / 9550) * safetyMultiplier;
 
-        // Query DB for matching products where ratedPower >= requiredPower
-        // We join products and product_specs
-        // For Drizzle ORM Relational Queries:
-        const matchingSpecs = await db
+        let baseQuery = db
             .select({
                 product: products,
-                specs: productSpecs
+                specs: productSpecs,
+                companyName: companies.name,
+                motorTypeName: motorTypes.name,
             })
             .from(productSpecs)
             .innerJoin(products, eq(productSpecs.productId, products.id))
-            .where(sql`CAST(${productSpecs.ratedPower} AS NUMERIC) >= ${requiredPower}`);
+            .leftJoin(companies, eq(products.companyId, companies.id))
+            .leftJoin(motorTypes, eq(products.motorTypeId, motorTypes.id))
+            .where(sql`CAST(COALESCE(${productSpecs.acKw}, ${productSpecs.dcKw}) AS NUMERIC) >= ${requiredPower}`);
 
-        const formattedResults = matchingSpecs.map(row => ({
+        const formattedResults = (await baseQuery).filter(row => {
+            if (motorTypeId && row.product.motorTypeId !== motorTypeId) return false;
+            if (applicationId && (row.specs.acApplicationId !== applicationId && row.specs.dcApplicationId !== applicationId)) return false;
+            if (voltageId && row.specs.voltageId !== voltageId) return false;
+            if (frequencyId && row.specs.frequencyId !== frequencyId) return false;
+            return true;
+        }).map(row => ({
             ...row.product,
+            companyName: row.companyName,
+            motorTypeName: row.motorTypeName,
             specs: row.specs
         }));
 
         return NextResponse.json({
-            inputs: { desiredTorque, desiredSpeed },
+            inputs: { desiredTorque, desiredSpeed, motorTypeId, applicationId, voltageId, frequencyId },
             calculatedRequiredPower: requiredPower,
             results: formattedResults
         });
     } catch (err: any) {
-        console.error("Smart Search Error:", err);
+        console.error("Smart Search POST Error:", err);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }
@@ -57,6 +62,10 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const desiredTorque = searchParams.get("torque");
         const desiredSpeed = searchParams.get("speed");
+        const motorTypeId = searchParams.get("motorTypeId");
+        const applicationId = searchParams.get("applicationId");
+        const voltageId = searchParams.get("voltageId");
+        const frequencyId = searchParams.get("frequencyId");
 
         if (!desiredTorque || !desiredSpeed) {
             return NextResponse.json({ error: "Missing required mechanical parameters" }, { status: 400 });
@@ -67,29 +76,44 @@ export async function GET(request: Request) {
         const safetyConfig = configs.find(c => c.keyName === 'safety_margin_multiplier' || c.keyName === 'Required Power') || configs[0];
         const safetyMultiplier = safetyConfig?.constantValue ? Number(safetyConfig.constantValue) : 1;
 
-        const requiredPower = (Number(desiredTorque) * Number(desiredSpeed)) * safetyMultiplier;
+        // P (kW) = Torque (Nm) * Speed (RPM) / 9550 * Safety
+        const requiredPower = (Number(desiredTorque) * Number(desiredSpeed) / 9550) * safetyMultiplier;
 
-        const matchingSpecs = await db
+        let baseQuery = db
             .select({
                 product: products,
-                specs: productSpecs
+                specs: productSpecs,
+                companyName: companies.name,
+                motorTypeName: motorTypes.name,
             })
             .from(productSpecs)
             .innerJoin(products, eq(productSpecs.productId, products.id))
-            .where(sql`CAST(${productSpecs.ratedPower} AS NUMERIC) >= ${requiredPower}`);
+            .leftJoin(companies, eq(products.companyId, companies.id))
+            .leftJoin(motorTypes, eq(products.motorTypeId, motorTypes.id))
+            .where(sql`CAST(COALESCE(${productSpecs.acKw}, ${productSpecs.dcKw}) AS NUMERIC) >= ${requiredPower}`);
 
-        const formattedResults = matchingSpecs.map(row => ({
+        const matchingSpecs = await baseQuery;
+
+        const formattedResults = matchingSpecs.filter(row => {
+            if (motorTypeId && row.product.motorTypeId !== motorTypeId) return false;
+            if (applicationId && (row.specs.acApplicationId !== applicationId && row.specs.dcApplicationId !== applicationId)) return false;
+            if (voltageId && row.specs.voltageId !== voltageId) return false;
+            if (frequencyId && row.specs.frequencyId !== frequencyId) return false;
+            return true;
+        }).map(row => ({
             ...row.product,
+            companyName: row.companyName,
+            motorTypeName: row.motorTypeName,
             specs: row.specs
         }));
 
         return NextResponse.json({
-            inputs: { desiredTorque, desiredSpeed },
+            inputs: { desiredTorque, desiredSpeed, motorTypeId, applicationId, voltageId, frequencyId },
             calculatedRequiredPower: requiredPower,
             results: formattedResults
         });
     } catch (err: any) {
-        console.error("Smart Search Error:", err);
+        console.error("Smart Search GET Error:", err);
         return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { products, productSpecs } from "@/db/schema";
+import { products, productSpecs, companies, motorTypes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
 import path from "path";
@@ -9,11 +9,31 @@ import { writeFile, mkdir } from "fs/promises";
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const motorType = searchParams.get('motor_type');
+        const motorTypeId = searchParams.get('motorTypeId');
 
-        let query = db.select().from(products);
+        let query = db
+            .select({
+                id: products.id,
+                name: products.name,
+                sku: products.sku,
+                summary: products.summary,
+                images: products.images,
+                isActive: products.isActive,
+                createdAt: products.createdAt,
+                updatedAt: products.updatedAt,
+                companyId: products.companyId,
+                motorTypeId: products.motorTypeId,
+                companyName: companies.name,
+                motorTypeName: motorTypes.name,
+            })
+            .from(products)
+            .leftJoin(companies, eq(products.companyId, companies.id))
+            .leftJoin(motorTypes, eq(products.motorTypeId, motorTypes.id));
 
-        // In a real app we'd add where clauses for motorType if it exists
+        if (motorTypeId) {
+            query.where(eq(products.motorTypeId, motorTypeId));
+        }
+
         const allProducts = await query;
         return NextResponse.json(allProducts);
     } catch (err: any) {
@@ -28,24 +48,30 @@ export async function POST(request: Request) {
         const name = formData.get("name") as string;
         const sku = formData.get("sku") as string;
         const summary = formData.get("summary") as string;
-        const motorType = formData.get("motorType") as string;
+        const companyId = formData.get("companyId") as string;
+        const motorTypeId = formData.get("motorTypeId") as string;
         const specsStr = formData.get("specs") as string;
         const specs = specsStr ? JSON.parse(specsStr) : null;
-        const image = formData.get("image") as File;
+        const formImages = formData.getAll("image") as File[]; // Could be multiple
 
-        if (!name || !sku || !motorType) {
+        if (!name || !sku || !motorTypeId || !companyId || !specs) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
         }
 
-        let imageUrl = null;
-        if (image && image.size > 0) {
-            const bytes = await image.arrayBuffer();
-            const buffer = Buffer.from(bytes);
-            const filename = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+        let images: string[] = [];
+        if (formImages && formImages.length > 0) {
             const uploadDir = path.join(process.cwd(), "public", "uploads");
             await mkdir(uploadDir, { recursive: true });
-            await writeFile(path.join(uploadDir, filename), buffer);
-            imageUrl = `/uploads/${filename}`;
+
+            for (const image of formImages) {
+                if (image.size > 0) {
+                    const bytes = await image.arrayBuffer();
+                    const buffer = Buffer.from(bytes);
+                    const filename = `${Date.now()}-${image.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+                    await writeFile(path.join(uploadDir, filename), buffer);
+                    images.push(`/uploads/${filename}`);
+                }
+            }
         }
 
         // Insert Product
@@ -53,17 +79,37 @@ export async function POST(request: Request) {
             name,
             sku,
             summary,
-            motorType,
-            imageUrl,
+            companyId,
+            motorTypeId,
+            images,
         }).returning();
 
-        // Insert Specs
-        if (specs) {
-            await db.insert(productSpecs).values({
-                productId: newProduct.id,
-                ...specs
-            });
-        }
+        // Extract raw specs
+        const {
+            isAC,
+            // AC
+            acKw, poleId, voltageId, frequencyId, acApplicationId, totalMotors, motorsPerGroup,
+            // DC
+            dcArmatureVoltage, dcKw, dcFieldVoltage, dcFieldCurrent, dcApplicationId
+        } = specs;
+
+        // Insert Specs, zeroing/nulling out opposite motor type fields
+        await db.insert(productSpecs).values({
+            productId: newProduct.id,
+            acKw: isAC ? acKw : null,
+            poleId: isAC ? poleId : null,
+            voltageId: isAC ? voltageId : null,
+            frequencyId: isAC ? frequencyId : null,
+            acApplicationId: isAC ? acApplicationId : null,
+            totalMotors: isAC ? totalMotors : null,
+            motorsPerGroup: isAC ? motorsPerGroup : null,
+
+            dcArmatureVoltage: !isAC ? dcArmatureVoltage : null,
+            dcKw: !isAC ? dcKw : null,
+            dcFieldVoltage: !isAC ? dcFieldVoltage : null,
+            dcFieldCurrent: !isAC ? dcFieldCurrent : null,
+            dcApplicationId: !isAC ? dcApplicationId : null,
+        });
 
         return NextResponse.json(newProduct, { status: 201 });
     } catch (err: any) {
