@@ -60,10 +60,11 @@ export default function EditEquationModal({
                 onOpenChange(false);
                 onSuccess();
             } else {
-                toast.error("Failed to update equation.");
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to update equation.");
             }
-        } catch (err) {
-            toast.error("An error occurred");
+        } catch (err: any) {
+            toast.error(err.message || "An error occurred");
         } finally {
             setLoading(false);
         }
