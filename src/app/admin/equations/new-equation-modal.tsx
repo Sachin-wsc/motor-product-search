@@ -39,10 +39,11 @@ export default function NewEquationModal({ onSuccess }: { onSuccess: () => void 
                 setFormData({ keyName: "", formulaString: "", constantValue: "", description: "" });
                 onSuccess();
             } else {
-                toast.error("Failed to create equation configuration.");
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to create equation configuration.");
             }
-        } catch (err) {
-            toast.error("An error occurred");
+        } catch (err: any) {
+            toast.error(err.message || "An error occurred");
         } finally {
             setLoading(false);
         }

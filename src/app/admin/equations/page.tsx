@@ -44,10 +44,11 @@ export default function AdminEquations() {
                 toast.success(`Equation ${!currentStatus ? 'activated' : 'deactivated'} successfully.`);
                 fetchEquations();
             } else {
-                toast.error("Failed to toggle equation status.");
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to toggle equation status.");
             }
-        } catch (err) {
-            toast.error("An error occurred");
+        } catch (err: any) {
+            toast.error(err.message || "An error occurred");
         }
     };
 

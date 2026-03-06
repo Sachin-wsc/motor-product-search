@@ -34,10 +34,11 @@ export default function InquiryModal({ productId, productName }: { productId: st
                 setOpen(false);
                 setFormData({ customerName: "", customerEmail: "", companyName: "", message: "" });
             } else {
-                toast.error("Failed to submit inquiry.");
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to submit inquiry.");
             }
-        } catch (err) {
-            toast.error("An error occurred");
+        } catch (err: any) {
+            toast.error(err.message || "An error occurred");
         } finally {
             setLoading(false);
         }

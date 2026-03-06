@@ -25,10 +25,12 @@ export async function GET(request: Request) {
                 motorTypeId: products.motorTypeId,
                 companyName: companies.name,
                 motorTypeName: motorTypes.name,
+                specs: productSpecs,
             })
             .from(products)
             .leftJoin(companies, eq(products.companyId, companies.id))
-            .leftJoin(motorTypes, eq(products.motorTypeId, motorTypes.id));
+            .leftJoin(motorTypes, eq(products.motorTypeId, motorTypes.id))
+            .leftJoin(productSpecs, eq(products.id, productSpecs.productId));
 
         if (motorTypeId) {
             query.where(eq(products.motorTypeId, motorTypeId));
@@ -56,6 +58,12 @@ export async function POST(request: Request) {
 
         if (!name || !sku || !motorTypeId || !companyId || !specs) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+        }
+
+        // Check for duplicate SKU before proceeding
+        const existingProduct = await db.select().from(products).where(eq(products.sku, sku)).limit(1);
+        if (existingProduct.length > 0) {
+            return NextResponse.json({ error: "A product with this SKU already exists." }, { status: 400 });
         }
 
         let images: string[] = [];

@@ -62,10 +62,11 @@ export default function AdminDashboard() {
                 toast.success("Quote generated and sent to customer!");
                 setInquiries(prev => prev.map(inq => inq.id === id ? { ...inq, status: "Quote Sent" } : inq));
             } else {
-                toast.error("Failed to generate quote.");
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to generate quote.");
             }
-        } catch (err) {
-            toast.error("An error occurred");
+        } catch (err: any) {
+            toast.error(err.message || "An error occurred");
         }
     };
 

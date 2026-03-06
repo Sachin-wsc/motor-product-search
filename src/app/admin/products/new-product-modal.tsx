@@ -10,12 +10,43 @@ import CreatableSelect from 'react-select/creatable';
 import { useDropzone } from 'react-dropzone';
 import { X } from "lucide-react";
 
+import * as yup from "yup";
+
 // Define Option Type for Select
 type OptionType = { value: string; label: string };
+
+const productSchema = yup.object().shape({
+    company: yup.object().nullable().required("Company is required"),
+    motorType: yup.object().nullable().required("Motor Type is required"),
+    name: yup.string().required("Product Name is required"),
+    sku: yup.string().required("SKU / Part No is required"),
+});
+
+const initialFormState = {
+    name: "",
+    sku: "",
+    summary: "",
+    company: null as OptionType | null,
+    motorType: null as OptionType | null,
+    isAC: true,
+    acKw: "",
+    totalMotors: "",
+    motorsPerGroup: "",
+    pole: null as OptionType | null,
+    voltage: null as OptionType | null,
+    frequency: null as OptionType | null,
+    acApp: null as OptionType | null,
+    dcArmatureVoltage: "",
+    dcKw: "",
+    dcFieldVoltage: "",
+    dcFieldCurrent: "",
+    dcApp: null as OptionType | null,
+};
 
 export default function NewProductModal({ onSuccess }: { onSuccess: () => void }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
     // Master Data States
     const [companies, setCompanies] = useState<OptionType[]>([]);
@@ -25,36 +56,9 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
     const [frequencies, setFrequencies] = useState<OptionType[]>([]);
     const [applications, setApplications] = useState<OptionType[]>([]);
 
-    // Form Data States
-    const [formData, setFormData] = useState({
-        name: "",
-        sku: "",
-        summary: "",
-    });
-
-    const [selectedCompany, setSelectedCompany] = useState<OptionType | null>(null);
-    const [selectedMotorType, setSelectedMotorType] = useState<OptionType | null>(null);
+    // Unified Form State
+    const [formData, setFormData] = useState(initialFormState);
     const [images, setImages] = useState<(File & { preview: string })[]>([]);
-
-    // Dynamic Specs
-    const [isAC, setIsAC] = useState(true); // AC by default
-
-    // AC Specs
-    const [acKw, setAcKw] = useState("");
-    const [totalMotors, setTotalMotors] = useState("");
-    const [motorsPerGroup, setMotorsPerGroup] = useState("");
-
-    const [selectedPole, setSelectedPole] = useState<OptionType | null>(null);
-    const [selectedVoltage, setSelectedVoltage] = useState<OptionType | null>(null);
-    const [selectedFrequency, setSelectedFrequency] = useState<OptionType | null>(null);
-    const [selectedAcApp, setSelectedAcApp] = useState<OptionType | null>(null);
-
-    // DC Specs
-    const [dcArmatureVoltage, setDcArmatureVoltage] = useState("");
-    const [dcKw, setDcKw] = useState("");
-    const [dcFieldVoltage, setDcFieldVoltage] = useState("");
-    const [dcFieldCurrent, setDcFieldCurrent] = useState("");
-    const [selectedDcApp, setSelectedDcApp] = useState<OptionType | null>(null);
 
     // Fetch Master Data on Mount
     useEffect(() => {
@@ -82,49 +86,30 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
         };
 
         if (open) {
-            fetchMasterData()
-            // setAll data anull 
-            setFormData({
-                name: "",
-                sku: "",
-                summary: "",
-            });
-            setSelectedCompany(null);
-            setSelectedMotorType(null);
+            fetchMasterData();
+            // Reset state directly using initialFormState
+            setFormData(initialFormState);
             setImages([]);
-            setAcKw("");
-            setTotalMotors("");
-            setMotorsPerGroup("");
-            setSelectedPole(null);
-            setSelectedVoltage(null);
-            setSelectedFrequency(null);
-            setSelectedAcApp(null);
-            setDcArmatureVoltage("");
-            setDcKw("");
-            setDcFieldVoltage("");
-            setDcFieldCurrent("");
-            setSelectedDcApp(null);
-        };
+            setErrors({});
+        }
     }, [open]);
 
 
     // Update isAC based on Motor Type Selection
     useEffect(() => {
-        if (selectedMotorType) {
+        if (formData.motorType) {
             // Very simple heuristic for demo: if it explicitly says DC or Brushed DC, it's DC. Otherwise AC.
-            const isDcType = selectedMotorType.label.toUpperCase().includes("DC");
-            setIsAC(!isDcType);
+            const isDcType = formData.motorType.label.toUpperCase().includes("DC");
+            setFormData(prev => ({ ...prev, isAC: !isDcType }));
         }
-    }, [selectedMotorType]);
+    }, [formData.motorType]);
 
 
-    // Generic handler for creating new master entities
     const handleCreateOption = async (
         inputValue: string,
         endpoint: string,
         payloadKey: string,
-        setStateAction: React.Dispatch<React.SetStateAction<OptionType[]>>,
-        setSelectionAction: React.Dispatch<React.SetStateAction<OptionType | null>>
+        setStateAction: React.Dispatch<React.SetStateAction<OptionType[]>>
     ) => {
         setLoading(true);
         try {
@@ -146,8 +131,11 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
 
             const newOption: OptionType = { value: data.id, label };
             setStateAction((prev) => [...prev, newOption]);
-            setSelectionAction(newOption);
+
+            // To support our unified formData dynamically we need to know the payload key
+            // since we removed setSelectionAction, we'll return the option to let caller set it
             toast.success("Created new entry successfully");
+            return newOption;
         } catch (err: any) {
             console.error("Failed to create new entry", err);
             toast.error(err.message || "Failed to create new entry");
@@ -188,29 +176,41 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setErrors({});
 
-        if (!selectedCompany || !selectedMotorType) {
-            toast.error("Please select a Company and Motor Type");
-            return;
+        try {
+            await productSchema.validate(formData, { abortEarly: false });
+        } catch (validationErrors) {
+            if (validationErrors instanceof yup.ValidationError) {
+                const newErrors: Record<string, string> = {};
+                validationErrors.inner.forEach((error) => {
+                    if (error.path) {
+                        newErrors[error.path] = error.message;
+                    }
+                });
+                setErrors(newErrors);
+                toast.error("Please fill in all required fields.");
+                return;
+            }
         }
 
         setLoading(true);
 
         // Map Specs
         const specs = {
-            isAC,
-            acKw: acKw ? Number(acKw) : null,
-            poleId: selectedPole?.value || null,
-            voltageId: selectedVoltage?.value || null,
-            frequencyId: selectedFrequency?.value || null,
-            acApplicationId: selectedAcApp?.value || null,
-            totalMotors: totalMotors ? Number(totalMotors) : null,
-            motorsPerGroup: motorsPerGroup ? Number(motorsPerGroup) : null,
-            dcArmatureVoltage: dcArmatureVoltage ? Number(dcArmatureVoltage) : null,
-            dcKw: dcKw ? Number(dcKw) : null,
-            dcFieldVoltage: dcFieldVoltage ? Number(dcFieldVoltage) : null,
-            dcFieldCurrent: dcFieldCurrent ? Number(dcFieldCurrent) : null,
-            dcApplicationId: selectedDcApp?.value || null,
+            isAC: formData.isAC,
+            acKw: formData.acKw ? Number(formData.acKw) : null,
+            poleId: formData.pole?.value || null,
+            voltageId: formData.voltage?.value || null,
+            frequencyId: formData.frequency?.value || null,
+            acApplicationId: formData.acApp?.value || null,
+            totalMotors: formData.totalMotors ? Number(formData.totalMotors) : null,
+            motorsPerGroup: formData.motorsPerGroup ? Number(formData.motorsPerGroup) : null,
+            dcArmatureVoltage: formData.dcArmatureVoltage ? Number(formData.dcArmatureVoltage) : null,
+            dcKw: formData.dcKw ? Number(formData.dcKw) : null,
+            dcFieldVoltage: formData.dcFieldVoltage ? Number(formData.dcFieldVoltage) : null,
+            dcFieldCurrent: formData.dcFieldCurrent ? Number(formData.dcFieldCurrent) : null,
+            dcApplicationId: formData.dcApp?.value || null,
         };
 
         try {
@@ -218,8 +218,8 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
             formDataObj.append("name", formData.name);
             formDataObj.append("sku", formData.sku);
             formDataObj.append("summary", formData.summary);
-            formDataObj.append("companyId", selectedCompany.value);
-            formDataObj.append("motorTypeId", selectedMotorType.value);
+            formDataObj.append("companyId", formData.company!.value);
+            formDataObj.append("motorTypeId", formData.motorType!.value);
             formDataObj.append("specs", JSON.stringify(specs));
 
             images.forEach((file) => {
@@ -234,18 +234,9 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
             if (res.ok) {
                 toast.success("Product created successfully.");
                 setOpen(false);
-                // Reset State
-                setFormData({ name: "", sku: "", summary: "" });
-                setSelectedCompany(null);
-                setSelectedMotorType(null);
-                setSelectedPole(null);
-                setSelectedVoltage(null);
-                setSelectedFrequency(null);
-                setSelectedAcApp(null);
-                setSelectedDcApp(null);
-                setAcKw(""); setTotalMotors(""); setMotorsPerGroup("");
-                setDcArmatureVoltage(""); setDcKw(""); setDcFieldVoltage(""); setDcFieldCurrent("");
+                setFormData(initialFormState);
                 setImages([]);
+                setErrors({});
                 onSuccess();
             } else {
                 const errorData = await res.json().catch(() => ({}));
@@ -279,12 +270,16 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                                 id="company"
                                 isClearable
                                 options={companies}
-                                value={selectedCompany}
-                                onChange={(val) => setSelectedCompany(val)}
-                                onCreateOption={(val) => handleCreateOption(val, "/api/v1/master/companies", "name", setCompanies, setSelectedCompany)}
+                                value={formData.company}
+                                onChange={(val) => setFormData(prev => ({ ...prev, company: val }))}
+                                onCreateOption={async (val) => {
+                                    const newOpt = await handleCreateOption(val, "/api/v1/master/companies", "name", setCompanies);
+                                    if (newOpt) setFormData(prev => ({ ...prev, company: newOpt }));
+                                }}
                                 isDisabled={loading}
                                 placeholder="Select or type..."
                             />
+                            {errors.companyId && <p className="text-sm text-red-500">{errors.companyId}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="motorType">Motor Type *</Label>
@@ -292,20 +287,26 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                                 id="motorType"
                                 isClearable
                                 options={motorTypes}
-                                value={selectedMotorType}
-                                onChange={(val) => setSelectedMotorType(val)}
-                                onCreateOption={(val) => handleCreateOption(val, "/api/v1/master/motor-types", "name", setMotorTypes, setSelectedMotorType)}
+                                value={formData.motorType}
+                                onChange={(val) => setFormData(prev => ({ ...prev, motorType: val }))}
+                                onCreateOption={async (val) => {
+                                    const newOpt = await handleCreateOption(val, "/api/v1/master/motor-types", "name", setMotorTypes);
+                                    if (newOpt) setFormData(prev => ({ ...prev, motorType: newOpt }));
+                                }}
                                 isDisabled={loading}
                                 placeholder="Select or type..."
                             />
+                            {errors.motorTypeId && <p className="text-sm text-red-500">{errors.motorTypeId}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="name">Product Name *</Label>
-                            <Input id="name" required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                            <Input id="name" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                            {errors.name && <p className="text-sm text-red-500">{errors.name}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="sku">SKU / Part No *</Label>
-                            <Input id="sku" required value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
+                            <Input id="sku" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
+                            {errors.sku && <p className="text-sm text-red-500">{errors.sku}</p>}
                         </div>
                     </div>
 
@@ -353,29 +354,32 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                     </div>
 
                     {/* Dynamic Specs Section based on AC/DC */}
-                    {selectedMotorType && (
+                    {formData.motorType && (
                         <div className="pt-4 border-t border-gray-200">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="text-lg font-semibold text-primary">
-                                    Technical Specifications ({isAC ? "AC Motor" : "DC Motor"})
+                                    Technical Specifications ({formData.isAC ? "AC Motor" : "DC Motor"})
                                 </h3>
                             </div>
 
-                            {isAC ? (
-                                // AC MOTOR SPECS
+                            {formData.isAC ? (
+                                /* AC MOTOR SPECS */
                                 <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
                                     <div className="space-y-2">
                                         <Label>AC kW</Label>
-                                        <Input type="number" step="0.01" value={acKw} onChange={e => setAcKw(e.target.value)} placeholder="e.g. 5.5" />
+                                        <Input type="number" step="0.01" value={formData.acKw} onChange={e => setFormData(prev => ({ ...prev, acKw: e.target.value }))} placeholder="e.g. 5.5" />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Poles</Label>
                                         <CreatableSelect
                                             isClearable
                                             options={poles}
-                                            value={selectedPole}
-                                            onChange={(val) => setSelectedPole(val)}
-                                            onCreateOption={(val) => handleCreateOption(val, "/api/v1/master/poles", "poleNumber", setPoles, setSelectedPole)}
+                                            value={formData.pole}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, pole: val }))}
+                                            onCreateOption={async (val) => {
+                                                const newOpt = await handleCreateOption(val, "/api/v1/master/poles", "poleNumber", setPoles);
+                                                if (newOpt) setFormData(prev => ({ ...prev, pole: newOpt }));
+                                            }}
                                             isDisabled={loading}
                                             placeholder="Select or Create..."
                                         />
@@ -385,9 +389,12 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                                         <CreatableSelect
                                             isClearable
                                             options={voltages}
-                                            value={selectedVoltage}
-                                            onChange={(val) => setSelectedVoltage(val)}
-                                            onCreateOption={(val) => handleCreateOption(val, "/api/v1/master/voltages", "voltageValue", setVoltages, setSelectedVoltage)}
+                                            value={formData.voltage}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, voltage: val }))}
+                                            onCreateOption={async (val) => {
+                                                const newOpt = await handleCreateOption(val, "/api/v1/master/voltages", "voltageValue", setVoltages);
+                                                if (newOpt) setFormData(prev => ({ ...prev, voltage: newOpt }));
+                                            }}
                                             isDisabled={loading}
                                             placeholder="Select or Create..."
                                         />
@@ -397,9 +404,12 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                                         <CreatableSelect
                                             isClearable
                                             options={frequencies}
-                                            value={selectedFrequency}
-                                            onChange={(val) => setSelectedFrequency(val)}
-                                            onCreateOption={(val) => handleCreateOption(val, "/api/v1/master/frequencies", "frequencyValue", setFrequencies, setSelectedFrequency)}
+                                            value={formData.frequency}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, frequency: val }))}
+                                            onCreateOption={async (val) => {
+                                                const newOpt = await handleCreateOption(val, "/api/v1/master/frequencies", "frequencyValue", setFrequencies);
+                                                if (newOpt) setFormData(prev => ({ ...prev, frequency: newOpt }));
+                                            }}
                                             isDisabled={loading}
                                             placeholder="Select or Create..."
                                         />
@@ -409,49 +419,55 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                                         <CreatableSelect
                                             isClearable
                                             options={applications}
-                                            value={selectedAcApp}
-                                            onChange={(val) => setSelectedAcApp(val)}
-                                            onCreateOption={(val) => handleCreateOption(val, "/api/v1/master/applications", "name", setApplications, setSelectedAcApp)}
+                                            value={formData.acApp}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, acApp: val }))}
+                                            onCreateOption={async (val) => {
+                                                const newOpt = await handleCreateOption(val, "/api/v1/master/applications", "name", setApplications);
+                                                if (newOpt) setFormData(prev => ({ ...prev, acApp: newOpt }));
+                                            }}
                                             isDisabled={loading}
                                             placeholder="Select or Create..."
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Total Motors</Label>
-                                        <Input type="number" step="1" value={totalMotors} onChange={e => setTotalMotors(e.target.value)} />
+                                        <Input type="number" step="1" value={formData.totalMotors} onChange={e => setFormData(prev => ({ ...prev, totalMotors: e.target.value }))} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Motors Per Group</Label>
-                                        <Input type="number" step="1" value={motorsPerGroup} onChange={e => setMotorsPerGroup(e.target.value)} />
+                                        <Input type="number" step="1" value={formData.motorsPerGroup} onChange={e => setFormData(prev => ({ ...prev, motorsPerGroup: e.target.value }))} />
                                     </div>
                                 </div>
                             ) : (
-                                // DC MOTOR SPECS
+                                /* DC MOTOR SPECS */
                                 <div className="grid grid-cols-2 gap-4 bg-orange-50/50 p-4 rounded-xl border border-orange-100">
                                     <div className="space-y-2">
                                         <Label>DC Armature Voltage (V)</Label>
-                                        <Input type="number" step="0.01" value={dcArmatureVoltage} onChange={e => setDcArmatureVoltage(e.target.value)} />
+                                        <Input type="number" step="0.01" value={formData.dcArmatureVoltage} onChange={e => setFormData(prev => ({ ...prev, dcArmatureVoltage: e.target.value }))} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>DC kW</Label>
-                                        <Input type="number" step="0.01" value={dcKw} onChange={e => setDcKw(e.target.value)} />
+                                        <Input type="number" step="0.01" value={formData.dcKw} onChange={e => setFormData(prev => ({ ...prev, dcKw: e.target.value }))} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>DC Field Voltage (V)</Label>
-                                        <Input type="number" step="0.01" value={dcFieldVoltage} onChange={e => setDcFieldVoltage(e.target.value)} />
+                                        <Input type="number" step="0.01" value={formData.dcFieldVoltage} onChange={e => setFormData(prev => ({ ...prev, dcFieldVoltage: e.target.value }))} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>DC Field Current (A)</Label>
-                                        <Input type="number" step="0.01" value={dcFieldCurrent} onChange={e => setDcFieldCurrent(e.target.value)} />
+                                        <Input type="number" step="0.01" value={formData.dcFieldCurrent} onChange={e => setFormData(prev => ({ ...prev, dcFieldCurrent: e.target.value }))} />
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Application</Label>
                                         <CreatableSelect
                                             isClearable
                                             options={applications}
-                                            value={selectedDcApp}
-                                            onChange={(val) => setSelectedDcApp(val)}
-                                            onCreateOption={(val) => handleCreateOption(val, "/api/v1/master/applications", "name", setApplications, setSelectedDcApp)}
+                                            value={formData.dcApp}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, dcApp: val }))}
+                                            onCreateOption={async (val) => {
+                                                const newOpt = await handleCreateOption(val, "/api/v1/master/applications", "name", setApplications);
+                                                if (newOpt) setFormData(prev => ({ ...prev, dcApp: newOpt }));
+                                            }}
                                             isDisabled={loading}
                                             placeholder="Select or Create..."
                                         />

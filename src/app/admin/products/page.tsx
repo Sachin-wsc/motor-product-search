@@ -43,10 +43,11 @@ export default function AdminProducts() {
                 setDeletingProduct(null);
                 fetchProducts();
             } else {
-                toast.error("Failed to delete product");
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to delete product");
             }
-        } catch (err) {
-            toast.error("An error occurred while deleting");
+        } catch (err: any) {
+            toast.error(err.message || "An error occurred while deleting");
         }
     };
 
