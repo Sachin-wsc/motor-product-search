@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const motorTypeId = searchParams.get('motorTypeId');
+        const companyId = searchParams.get('companyId');
 
         let query = db
             .select({
@@ -32,11 +33,25 @@ export async function GET(request: Request) {
             .leftJoin(motorTypes, eq(products.motorTypeId, motorTypes.id))
             .leftJoin(productSpecs, eq(products.id, productSpecs.productId));
 
+
+        let queryParams = [];
+
         if (motorTypeId) {
-            query.where(eq(products.motorTypeId, motorTypeId));
+            queryParams.push(eq(products.motorTypeId, motorTypeId));
         }
 
-        const allProducts = await query;
+        if (companyId) {
+            queryParams.push(eq(products.companyId, companyId));
+        }
+
+        // Apply conditions using AND if there are any
+        let finalQuery: any = query;
+        if (queryParams.length > 0) {
+            const { and } = require("drizzle-orm");
+            finalQuery = query.where(and(...queryParams));
+        }
+
+        const allProducts = await finalQuery;
         return NextResponse.json(allProducts);
     } catch (err: any) {
         console.error("GET /products error", err);
