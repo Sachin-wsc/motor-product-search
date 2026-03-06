@@ -69,6 +69,7 @@ export default function EditProductModal({
 
     const [images, setImages] = useState<(File & { preview: string })[]>([]);
     const [existingImages, setExistingImages] = useState<string[]>([]);
+    const [documentFile, setDocumentFile] = useState<File | null>(null);
 
     useEffect(() => {
         const fetchMasterData = async () => {
@@ -134,6 +135,7 @@ export default function EditProductModal({
 
                     setImages([]); // Clear images on modal open for new uploads
                     setExistingImages(product.images || []);
+                    setDocumentFile(null);
                     setErrors({});
                 }
             } catch (err) {
@@ -279,6 +281,10 @@ export default function EditProductModal({
                 formDataObj.append("image", file);
             });
 
+            if (documentFile) {
+                formDataObj.append("document", documentFile);
+            }
+
             const res = await fetch(`/api/v1/products/${product.id}`, {
                 method: "PUT",
                 body: formDataObj
@@ -360,6 +366,12 @@ export default function EditProductModal({
                     <div className="space-y-2">
                         <Label htmlFor="edit-summary">Summary</Label>
                         <Textarea id="edit-summary" value={formData.summary} onChange={e => setFormData({ ...formData, summary: e.target.value })} className="resize-none" rows={2} />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-document">Upload Document</Label>
+                        {product?.documentUrl && <div className="text-xs mb-1"><a href={product.documentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">View current document</a></div>}
+                        <Input id="edit-document" type="file" accept=".pdf,.doc,.docx" onChange={e => setDocumentFile(e.target.files?.[0] || null)} />
                     </div>
 
                     <div className="space-y-2">

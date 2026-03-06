@@ -55,6 +55,7 @@ export async function POST(request: Request) {
         const specsStr = formData.get("specs") as string;
         const specs = specsStr ? JSON.parse(specsStr) : null;
         const formImages = formData.getAll("image") as File[]; // Could be multiple
+        const documentFile = formData.get("document") as File | null;
 
         if (!name || !sku || !motorTypeId || !companyId || !specs) {
             return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -82,6 +83,18 @@ export async function POST(request: Request) {
             }
         }
 
+        let documentUrl: string | null = null;
+
+        if (documentFile && documentFile.size > 0) {
+            const uploadDir = path.join(process.cwd(), "public", "uploads");
+            await mkdir(uploadDir, { recursive: true });
+            const bytes = await documentFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            const filename = `${Date.now()}-doc-${documentFile.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+            await writeFile(path.join(uploadDir, filename), buffer);
+            documentUrl = `/uploads/${filename}`;
+        }
+
         // Insert Product
         const [newProduct] = await db.insert(products).values({
             name,
@@ -90,6 +103,7 @@ export async function POST(request: Request) {
             companyId,
             motorTypeId,
             images,
+            documentUrl,
         }).returning();
 
         // Extract raw specs

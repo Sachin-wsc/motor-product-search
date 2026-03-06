@@ -63,6 +63,7 @@ export const products = pgTable("products", {
     summary: text("summary"),
     images: jsonb("images").default([]),
     datasheetUrl: text("datasheet_url"),
+    documentUrl: text("document_url"),
     motorTypeId: uuid("motor_type_id")
         .references(() => motorTypes.id)
         .notNull(),

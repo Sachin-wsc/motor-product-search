@@ -82,6 +82,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const formImages = formData.getAll("image") as File[];
         const existingImagesStr = formData.get("existingImages") as string;
 
+        const documentFile = formData.get("document") as File | null;
+
         let finalImages: string[] = [];
         let hasImagesField = false;
 
@@ -123,6 +125,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
         if (hasImagesField) {
             productUpdate.images = finalImages;
+        }
+
+        if (documentFile && documentFile.size > 0) {
+            const uploadDir = path.join(process.cwd(), "public", "uploads");
+            await mkdir(uploadDir, { recursive: true });
+            const bytes = await documentFile.arrayBuffer();
+            const buffer = Buffer.from(bytes);
+            const filename = `${Date.now()}-doc-${documentFile.name.replace(/[^a-zA-Z0-9.]/g, '')}`;
+            await writeFile(path.join(uploadDir, filename), buffer);
+            productUpdate.documentUrl = `/uploads/${filename}`;
         }
 
         const [updatedProduct] = await db.update(products)

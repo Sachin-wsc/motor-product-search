@@ -59,6 +59,7 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
     // Unified Form State
     const [formData, setFormData] = useState(initialFormState);
     const [images, setImages] = useState<(File & { preview: string })[]>([]);
+    const [documentFile, setDocumentFile] = useState<File | null>(null);
 
     // Fetch Master Data on Mount
     useEffect(() => {
@@ -90,6 +91,7 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
             // Reset state directly using initialFormState
             setFormData(initialFormState);
             setImages([]);
+            setDocumentFile(null);
             setErrors({});
         }
     }, [open]);
@@ -226,16 +228,20 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                 formDataObj.append("image", file);
             });
 
+            if (documentFile) {
+                formDataObj.append("document", documentFile);
+            }
+
             const res = await fetch("/api/v1/products", {
                 method: "POST",
                 body: formDataObj
             });
-            console.log("--------------------->", res)
             if (res.ok) {
                 toast.success("Product created successfully.");
                 setOpen(false);
                 setFormData(initialFormState);
                 setImages([]);
+                setDocumentFile(null);
                 setErrors({});
                 onSuccess();
             } else {
@@ -308,6 +314,11 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                             <Input id="sku" value={formData.sku} onChange={e => setFormData({ ...formData, sku: e.target.value })} />
                             {errors.sku && <p className="text-sm text-red-500">{errors.sku}</p>}
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="document">Upload Document</Label>
+                        <Input id="document" type="file" accept=".pdf,.doc,.docx" onChange={e => setDocumentFile(e.target.files?.[0] || null)} />
                     </div>
 
                     <div className="space-y-2">
