@@ -81,8 +81,32 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
             }
         };
 
-        if (open) fetchMasterData();
+        if (open) {
+            fetchMasterData()
+            // setAll data anull 
+            setFormData({
+                name: "",
+                sku: "",
+                summary: "",
+            });
+            setSelectedCompany(null);
+            setSelectedMotorType(null);
+            setImages([]);
+            setAcKw("");
+            setTotalMotors("");
+            setMotorsPerGroup("");
+            setSelectedPole(null);
+            setSelectedVoltage(null);
+            setSelectedFrequency(null);
+            setSelectedAcApp(null);
+            setDcArmatureVoltage("");
+            setDcKw("");
+            setDcFieldVoltage("");
+            setDcFieldCurrent("");
+            setSelectedDcApp(null);
+        };
     }, [open]);
+
 
     // Update isAC based on Motor Type Selection
     useEffect(() => {
@@ -111,6 +135,10 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
             });
             const data = await res.json();
 
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to create new entry");
+            }
+
             // Assume returning object has id and we need to map the label dynamically based on what was inserted
             let label = inputValue;
             if (endpoint.includes('voltages')) label = `${data.voltageValue} ${data.unit}`;
@@ -120,8 +148,9 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
             setStateAction((prev) => [...prev, newOption]);
             setSelectionAction(newOption);
             toast.success("Created new entry successfully");
-        } catch (err) {
-            toast.error("Failed to create new entry");
+        } catch (err: any) {
+            console.error("Failed to create new entry", err);
+            toast.error(err.message || "Failed to create new entry");
         } finally {
             setLoading(false);
         }
@@ -201,7 +230,7 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                 method: "POST",
                 body: formDataObj
             });
-
+            console.log("--------------------->", res)
             if (res.ok) {
                 toast.success("Product created successfully.");
                 setOpen(false);
@@ -219,10 +248,11 @@ export default function NewProductModal({ onSuccess }: { onSuccess: () => void }
                 setImages([]);
                 onSuccess();
             } else {
-                toast.error("Failed to create product.");
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to create product.");
             }
-        } catch (err) {
-            toast.error("An error occurred");
+        } catch (err: any) {
+            toast.error(err.message || "An error occurred");
         } finally {
             setLoading(false);
         }
