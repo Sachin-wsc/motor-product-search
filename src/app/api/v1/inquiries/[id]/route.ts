@@ -13,10 +13,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             return NextResponse.json({ error: "Status is required" }, { status: 400 });
         }
 
-        const [updatedInquiry] = await db.update(inquiries)
+        await db.update(inquiries)
             .set({ status })
-            .where(eq(inquiries.id, id))
-            .returning();
+            .where(eq(inquiries.id, id));
+
+        const [updatedInquiry] = await db.select().from(inquiries).where(eq(inquiries.id, id));
 
         if (!updatedInquiry) {
             return NextResponse.json({ error: "Inquiry not found" }, { status: 404 });

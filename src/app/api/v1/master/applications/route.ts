@@ -27,10 +27,14 @@ export async function POST(request: Request) {
             return NextResponse.json(existing[0], { status: 200 });
         }
 
-        const [newApp] = await db.insert(masterApplications).values({
+        const newId = crypto.randomUUID();
+        await db.insert(masterApplications).values({
+            id: newId,
             name,
             description,
-        }).returning();
+        });
+
+        const [newApp] = await db.select().from(masterApplications).where(eq(masterApplications.id, newId));
 
         return NextResponse.json(newApp, { status: 201 });
     } catch (err) {

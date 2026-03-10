@@ -1,33 +1,19 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1772440321930,
-      "tag": "0000_petite_ultragirl",
+      "version": "5",
+      "when": 1773132209753,
+      "tag": "0000_broad_metal_master",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "7",
-      "when": 1772451236922,
-      "tag": "0001_huge_sinister_six",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772540623873,
-      "tag": "0002_freezing_jackpot",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772690532821,
-      "tag": "0003_sharp_thing",
+      "version": "5",
+      "when": 1773133281395,
+      "tag": "0001_workable_nehzno",
       "breakpoints": true
     }
   ]

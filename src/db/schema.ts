@@ -1,51 +1,52 @@
-import { pgTable, uuid, varchar, text, boolean, timestamp, decimal, jsonb } from "drizzle-orm/pg-core";
+import { mysqlTable, varchar, text, boolean, timestamp, decimal, json } from "drizzle-orm/mysql-core";
+import { sql } from "drizzle-orm";
 
 /* =====================================================
    USERS
 ===================================================== */
 
-export const users = pgTable("users", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const users = mysqlTable("users", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     email: varchar("email", { length: 255 }).unique().notNull(),
     password: text("password").notNull(),
     role: varchar("role", { length: 50 }).default("admin").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 /* =====================================================
    MASTER TABLES
 ===================================================== */
 
-export const motorTypes = pgTable("motor_types", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const motorTypes = mysqlTable("motor_types", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: varchar("name", { length: 50 }).unique().notNull(), // AC / DC
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
 });
 
-export const masterPoles = pgTable("master_poles", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const masterPoles = mysqlTable("master_poles", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     poleNumber: varchar("pole_number", { length: 20 }).unique().notNull(), // 2,4,6,8
     isActive: boolean("is_active").default(true).notNull(),
 });
 
-export const masterVoltages = pgTable("master_voltages", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const masterVoltages = mysqlTable("master_voltages", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     voltageValue: decimal("voltage_value", { precision: 10, scale: 2 }).notNull(),
     unit: varchar("unit", { length: 20 }).default("V").notNull(),
     isActive: boolean("is_active").default(true).notNull(),
 });
 
-export const masterFrequencies = pgTable("master_frequencies", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const masterFrequencies = mysqlTable("master_frequencies", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     frequencyValue: decimal("frequency_value", { precision: 5, scale: 2 }).notNull(),
     unit: varchar("unit", { length: 10 }).default("Hz").notNull(),
     isActive: boolean("is_active").default(true).notNull(),
 });
 
-export const masterApplications = pgTable("master_applications", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const masterApplications = mysqlTable("master_applications", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: varchar("name", { length: 100 }).unique().notNull(),
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
@@ -55,28 +56,31 @@ export const masterApplications = pgTable("master_applications", {
    PRODUCTS
 ===================================================== */
 
-export const products = pgTable("products", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const products = mysqlTable("products", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: varchar("name", { length: 255 }).notNull(),
     sku: varchar("sku", { length: 100 }).unique().notNull(),
-    companyId: uuid("company_id").references(() => companies.id, { onDelete: "restrict" }).notNull(),
+    companyId: varchar("company_id", { length: 36 }).references(() => companies.id, { onDelete: "restrict" }).notNull(),
     summary: text("summary"),
-    images: jsonb("images").default([]),
+    images: json("images"),
     datasheetUrl: text("datasheet_url"),
     documentUrl: text("document_url"),
-    motorTypeId: uuid("motor_type_id")
+    motorTypeId: varchar("motor_type_id", { length: 36 })
         .references(() => motorTypes.id)
         .notNull(),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
-export const productSpecs = pgTable("product_specs", {
-    id: uuid("id").primaryKey().defaultRandom(),
 
-    productId: uuid("product_id")
+export const productSpecs = mysqlTable("product_specs", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
+
+    productId: varchar("product_id", { length: 36 })
         .references(() => products.id, { onDelete: "cascade" })
         .notNull(),
+
+    isAC: boolean("is_ac").default(true).notNull(),
 
     /* ==========================================
        AC MOTOR FIELDS
@@ -84,16 +88,16 @@ export const productSpecs = pgTable("product_specs", {
 
     acKw: decimal("ac_kw", { precision: 10, scale: 2 }),
 
-    poleId: uuid("pole_id")
+    poleId: varchar("pole_id", { length: 36 })
         .references(() => masterPoles.id),
 
-    voltageId: uuid("voltage_id")
+    voltageId: varchar("voltage_id", { length: 36 })
         .references(() => masterVoltages.id),
 
-    frequencyId: uuid("frequency_id")
+    frequencyId: varchar("frequency_id", { length: 36 })
         .references(() => masterFrequencies.id),
 
-    acApplicationId: uuid("ac_application_id")
+    acApplicationId: varchar("ac_application_id", { length: 36 })
         .references(() => masterApplications.id),
 
     totalMotors: decimal("total_motors", { precision: 10, scale: 0 }),
@@ -112,7 +116,7 @@ export const productSpecs = pgTable("product_specs", {
 
     dcFieldCurrent: decimal("dc_field_current", { precision: 10, scale: 2 }),
 
-    dcApplicationId: uuid("dc_application_id")
+    dcApplicationId: varchar("dc_application_id", { length: 36 })
         .references(() => masterApplications.id),
 });
 
@@ -120,25 +124,25 @@ export const productSpecs = pgTable("product_specs", {
    EQUATION CONFIG (SMART SELECTION ENGINE)
 ===================================================== */
 
-export const equationConfigs = pgTable("equation_configs", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const equationConfigs = mysqlTable("equation_configs", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     keyName: varchar("key_name", { length: 100 }).unique().notNull(),
     formulaString: text("formula_string").notNull(),
     constantValue: decimal("constant_value", { precision: 10, scale: 4 }),
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });
 
 /* =====================================================
    INQUIRIES
 ===================================================== */
 
-export const inquiries = pgTable("inquiries", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const inquiries = mysqlTable("inquiries", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
 
-    productId: uuid("product_id")
+    productId: varchar("product_id", { length: 36 })
         .references(() => products.id, { onDelete: "set null" }),
 
     customerName: varchar("customer_name", { length: 255 }).notNull(),
@@ -146,7 +150,7 @@ export const inquiries = pgTable("inquiries", {
     companyName: varchar("company_name", { length: 255 }),
     message: text("message"),
 
-    userSearchInputs: jsonb("user_search_inputs"),
+    userSearchInputs: json("user_search_inputs"),
     status: varchar("status", { length: 50 }).default("New").notNull(),
 
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -156,32 +160,32 @@ export const inquiries = pgTable("inquiries", {
    MOTOR SELECTION (AC + DC Combined)
 ===================================================== */
 
-export const motorSelections = pgTable("motor_selections", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const motorSelections = mysqlTable("motor_selections", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
 
-    inquiryId: uuid("inquiry_id")
+    inquiryId: varchar("inquiry_id", { length: 36 })
         .references(() => inquiries.id, { onDelete: "cascade" }),
 
-    motorTypeId: uuid("motor_type_id")
+    motorTypeId: varchar("motor_type_id", { length: 36 })
         .references(() => motorTypes.id)
         .notNull(),
 
     // Common Fields
     kw: decimal("kw", { precision: 10, scale: 2 }).notNull(),
-    applicationId: uuid("application_id")
+    applicationId: varchar("application_id", { length: 36 })
         .references(() => masterApplications.id),
 
     totalMotors: decimal("total_motors", { precision: 10, scale: 0 }),
     motorsPerGroup: decimal("motors_per_group", { precision: 10, scale: 0 }),
 
     // AC Specific
-    poleId: uuid("pole_id")
+    poleId: varchar("pole_id", { length: 36 })
         .references(() => masterPoles.id),
 
-    voltageId: uuid("voltage_id")
+    voltageId: varchar("voltage_id", { length: 36 })
         .references(() => masterVoltages.id),
 
-    frequencyId: uuid("frequency_id")
+    frequencyId: varchar("frequency_id", { length: 36 })
         .references(() => masterFrequencies.id),
 
     // DC Specific
@@ -192,13 +196,11 @@ export const motorSelections = pgTable("motor_selections", {
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-
-
-export const companies = pgTable("companies", {
-    id: uuid("id").primaryKey().defaultRandom(),
+export const companies = mysqlTable("companies", {
+    id: varchar("id", { length: 36 }).primaryKey().$defaultFn(() => crypto.randomUUID()),
     name: varchar("name", { length: 255 }).unique().notNull(),
     description: text("description"),
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });

@@ -27,10 +27,14 @@ export async function POST(request: Request) {
             return NextResponse.json(existing[0], { status: 200 });
         }
 
-        const [newMotorType] = await db.insert(motorTypes).values({
+        const newId = crypto.randomUUID();
+        await db.insert(motorTypes).values({
+            id: newId,
             name,
             description,
-        }).returning();
+        });
+
+        const [newMotorType] = await db.select().from(motorTypes).where(eq(motorTypes.id, newId));
 
         return NextResponse.json(newMotorType, { status: 201 });
     } catch (err) {

@@ -1,0 +1,1 @@
+ALTER TABLE `product_specs` ADD `is_ac` boolean DEFAULT true NOT NULL;

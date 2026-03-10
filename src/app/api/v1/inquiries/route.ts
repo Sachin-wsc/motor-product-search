@@ -22,14 +22,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Name and email are required" }, { status: 400 });
         }
 
-        const [newInquiry] = await db.insert(inquiries).values({
+        const newId = crypto.randomUUID();
+        await db.insert(inquiries).values({
+            id: newId,
             productId,
             customerName,
             customerEmail,
             companyName,
             message,
             userSearchInputs,
-        }).returning();
+        });
+
+        const [newInquiry] = await db.select().from(inquiries).where(eq(inquiries.id, newId));
 
         return NextResponse.json(newInquiry, { status: 201 });
     } catch (err: any) {

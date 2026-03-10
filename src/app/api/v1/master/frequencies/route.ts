@@ -29,10 +29,14 @@ export async function POST(request: Request) {
             return NextResponse.json(existing[0], { status: 200 });
         }
 
-        const [newFrequency] = await db.insert(masterFrequencies).values({
+        const newId = crypto.randomUUID();
+        await db.insert(masterFrequencies).values({
+            id: newId,
             frequencyValue: numericValue.toString(),
             unit: unit || "Hz",
-        }).returning();
+        });
+
+        const [newFrequency] = await db.select().from(masterFrequencies).where(eq(masterFrequencies.id, newId));
 
         return NextResponse.json(newFrequency, { status: 201 });
     } catch (err) {

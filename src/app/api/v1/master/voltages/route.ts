@@ -30,10 +30,14 @@ export async function POST(request: Request) {
             return NextResponse.json(existing[0], { status: 200 });
         }
 
-        const [newVoltage] = await db.insert(masterVoltages).values({
+        const newId = crypto.randomUUID();
+        await db.insert(masterVoltages).values({
+            id: newId,
             voltageValue: numericValue.toString(),
             unit: unit || "V",
-        }).returning();
+        });
+
+        const [newVoltage] = await db.select().from(masterVoltages).where(eq(masterVoltages.id, newId));
 
         return NextResponse.json(newVoltage, { status: 201 });
     } catch (err) {

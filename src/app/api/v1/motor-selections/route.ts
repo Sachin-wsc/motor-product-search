@@ -34,7 +34,9 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Motor type and kW are required" }, { status: 400 });
         }
 
-        const [newSelection] = await db.insert(motorSelections).values({
+        const newId = crypto.randomUUID();
+        await db.insert(motorSelections).values({
+            id: newId,
             inquiryId: inquiryId || null,
             motorTypeId,
             kw,
@@ -47,7 +49,9 @@ export async function POST(request: Request) {
             armVoltage: armVoltage || null,
             fieldVoltage: fieldVoltage || null,
             fieldCurrent: fieldCurrent || null,
-        }).returning();
+        });
+
+        const [newSelection] = await db.select().from(motorSelections).where(eq(motorSelections.id, newId));
 
         return NextResponse.json(newSelection, { status: 201 });
     } catch (err: any) {

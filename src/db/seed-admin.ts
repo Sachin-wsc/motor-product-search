@@ -1,6 +1,7 @@
+import "dotenv/config";
 import { db } from "./index";
 import { users } from "./schema";
-import bcrypt from "bcryptjs";
+import * as bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
 
 async function main() {

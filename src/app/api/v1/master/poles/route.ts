@@ -27,9 +27,13 @@ export async function POST(request: Request) {
             return NextResponse.json(existing[0], { status: 200 });
         }
 
-        const [newPole] = await db.insert(masterPoles).values({
+        const newId = crypto.randomUUID();
+        await db.insert(masterPoles).values({
+            id: newId,
             poleNumber,
-        }).returning();
+        });
+
+        const [newPole] = await db.select().from(masterPoles).where(eq(masterPoles.id, newId));
 
         return NextResponse.json(newPole, { status: 201 });
     } catch (err) {

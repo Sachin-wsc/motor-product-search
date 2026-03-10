@@ -4,7 +4,7 @@ import { products, productSpecs, companies, motorTypes, masterPoles, masterVolta
 import { eq } from "drizzle-orm";
 import path from "path";
 import { writeFile, mkdir } from "fs/promises";
-import { alias } from "drizzle-orm/pg-core";
+import { mysqlTable, varchar, text, boolean, timestamp, decimal, json, alias } from "drizzle-orm/mysql-core";
 
 const acApplications = alias(masterApplications, "acApplications");
 const dcApplications = alias(masterApplications, "dcApplications");
@@ -48,7 +48,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             ...row.product,
             companyName: row.companyName,
             motorTypeName: row.motorTypeName,
-            specs: row.specs ? {
+            specs: row.specs && row.specs.id ? {
                 ...row.specs,
                 poleNumber: row.poleNumber,
                 voltageValue: row.voltageValue,
@@ -137,10 +137,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             productUpdate.documentUrl = `/uploads/${filename}`;
         }
 
-        const [updatedProduct] = await db.update(products)
+        await db.update(products)
             .set(productUpdate)
-            .where(eq(products.id, id))
-            .returning();
+            .where(eq(products.id, id));
+
+        const [updatedProduct] = await db.select().from(products).where(eq(products.id, id));
 
         if (!updatedProduct) {
             return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -191,18 +192,21 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 
             // Try to update existing specs
-            const res = await db.update(productSpecs)
+            await db.update(productSpecs)
                 .set(specUpdate)
-                .where(eq(productSpecs.productId, id))
-                .returning();
+                .where(eq(productSpecs.productId, id));
 
-            if (res.length > 0) {
-                updatedSpecs = res[0];
+            const specsRes = await db.select().from(productSpecs).where(eq(productSpecs.productId, id));
+
+            if (specsRes.length > 0) {
+                updatedSpecs = specsRes[0];
             } else {
                 // Insert specs if they didn't exist before
-                const [newSpecs] = await db.insert(productSpecs)
-                    .values({ ...specUpdate, productId: id })
-                    .returning();
+                const newSpecId = crypto.randomUUID();
+                await db.insert(productSpecs)
+                    .values({ ...specUpdate, productId: id, id: newSpecId, isAC: isAC });
+
+                const [newSpecs] = await db.select().from(productSpecs).where(eq(productSpecs.id, newSpecId));
                 updatedSpecs = newSpecs;
             }
         }

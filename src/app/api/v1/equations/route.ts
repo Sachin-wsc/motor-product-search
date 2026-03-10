@@ -26,13 +26,17 @@ export async function POST(request: Request) {
         // Deactivate all existing equations
         await db.update(equationConfigs).set({ isActive: false });
 
-        const [newConfig] = await db.insert(equationConfigs).values({
+        const newId = crypto.randomUUID();
+        await db.insert(equationConfigs).values({
+            id: newId,
             keyName,
             formulaString,
             constantValue,
             description,
             isActive: true
-        }).returning();
+        });
+
+        const [newConfig] = await db.select().from(equationConfigs).where(eq(equationConfigs.id, newId));
 
         return NextResponse.json(newConfig, { status: 201 });
     } catch (err: any) {

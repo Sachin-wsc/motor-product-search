@@ -111,7 +111,9 @@ export async function POST(request: Request) {
         }
 
         // Insert Product
-        const [newProduct] = await db.insert(products).values({
+        const newProductId = crypto.randomUUID();
+        await db.insert(products).values({
+            id: newProductId,
             name,
             sku,
             summary,
@@ -119,7 +121,9 @@ export async function POST(request: Request) {
             motorTypeId,
             images,
             documentUrl,
-        }).returning();
+        });
+
+        const [newProduct] = await db.select().from(products).where(eq(products.id, newProductId));
 
         // Extract raw specs
         const {
@@ -131,8 +135,11 @@ export async function POST(request: Request) {
         } = specs;
 
         // Insert Specs, zeroing/nulling out opposite motor type fields
+        const newSpecId = crypto.randomUUID();
         await db.insert(productSpecs).values({
+            id: newSpecId,
             productId: newProduct.id,
+            isAC: isAC,
             acKw: isAC ? acKw : null,
             poleId: isAC ? poleId : null,
             voltageId: isAC ? voltageId : null,

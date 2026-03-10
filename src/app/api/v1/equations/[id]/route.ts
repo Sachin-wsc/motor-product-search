@@ -24,10 +24,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         if (body.description !== undefined) updateData.description = body.description;
 
         // Update the specific equation
-        const [updatedConfig] = await db.update(equationConfigs)
+        await db.update(equationConfigs)
             .set(updateData)
-            .where(eq(equationConfigs.id, id))
-            .returning();
+            .where(eq(equationConfigs.id, id));
+
+        const [updatedConfig] = await db.select().from(equationConfigs).where(eq(equationConfigs.id, id));
 
         if (!updatedConfig) {
             return NextResponse.json({ error: "Equation not found" }, { status: 404 });

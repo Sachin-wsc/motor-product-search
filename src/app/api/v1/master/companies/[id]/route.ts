@@ -13,10 +13,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
             return NextResponse.json({ error: "Missing required field: name" }, { status: 400 });
         }
 
-        const [updatedCompany] = await db.update(companies)
+        await db.update(companies)
             .set({ name, description, updatedAt: new Date() })
-            .where(eq(companies.id, id))
-            .returning();
+            .where(eq(companies.id, id));
+
+        const [updatedCompany] = await db.select().from(companies).where(eq(companies.id, id));
 
         if (!updatedCompany) {
             return NextResponse.json({ error: "Company not found" }, { status: 404 });
@@ -39,9 +40,15 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
             return NextResponse.json({ error: "Cannot delete company with associated products." }, { status: 400 });
         }
 
-        const [deletedCompany] = await db.delete(companies)
-            .where(eq(companies.id, id))
-            .returning();
+        // Fetch before delete to return info
+        const [deletedCompany] = await db.select().from(companies).where(eq(companies.id, id));
+
+        if (!deletedCompany) {
+            return NextResponse.json({ error: "Company not found" }, { status: 404 });
+        }
+
+        await db.delete(companies)
+            .where(eq(companies.id, id));
 
         if (!deletedCompany) {
             return NextResponse.json({ error: "Company not found" }, { status: 404 });
