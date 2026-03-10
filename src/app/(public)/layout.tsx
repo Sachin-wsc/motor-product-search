@@ -6,7 +6,8 @@ import Image from "next/image";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-
+    console.log("DB_USER:", process.env.DB_USER);
+    console.log("DB_PASSWORD:", process.env.DB_PASSWORD);
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col selection:bg-primary/20">
             <header className="sticky top-0 z-50 w-full pt-4 px-4 sm:px-6 lg:px-8 pb-2">
