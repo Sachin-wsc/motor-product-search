@@ -1,12 +1,15 @@
-import { defineConfig } from "drizzle-kit";
+// drizzle.config.ts
+import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-    schema: "./src/db/schema.ts",
-    out: "./src/db/migrations",
-    dialect: "mysql",
+    schema: './src/db/schema.ts',
+    out: './src/db/migrations',
+    dialect: 'mysql',
     dbCredentials: {
-        url: process.env.DATABASE_URL || "",
+        host: 'localhost',
+        user: 'baap-user',
+        password: 'dadaIsHere#202411',
+        database: 'motor_driver_db',
+        port: 3306,
     },
-    verbose: true,
-    strict: true,
 });
