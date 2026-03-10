@@ -73,6 +73,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 {/* <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-50"><path d="m6 9 6 6 6-6" /></svg> */}
                             </Link>
                             <Link
+                                href="/admin/companies"
+                                className={`px-5 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${pathname.startsWith('/admin/companies') ? 'bg-primary text-primary-foreground' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
+                            >
+                                Companies
+                            </Link>
+                            <Link
                                 href="/admin/equations"
                                 className={`px-5 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-1.5 ${pathname === '/admin/equations' ? 'bg-primary text-primary-foreground' : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300'}`}
                             >
