@@ -7,9 +7,11 @@ export default defineConfig({
     dialect: 'mysql',
     dbCredentials: {
         host: 'localhost',
-        user: 'baap-user',
-        password: 'dadaIsHere#202411',
-        database: 'motor_driver_db',
+        user: process.env.DB_USER || "",
+        password: process.env.DB_PASSWORD || "",
+        database: process.env.DB_NAME || "",
         port: 3306,
     },
+    verbose: true,
+    strict: true,
 });
