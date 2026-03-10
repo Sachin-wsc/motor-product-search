@@ -79,9 +79,9 @@ export default function AdminLogin() {
                         </Button>
                     </form>
                 </CardContent>
-                <CardFooter className="flex justify-center text-sm text-muted-foreground border-t border-muted pt-6">
+                {/* <CardFooter className="flex justify-center text-sm text-muted-foreground border-t border-muted pt-6">
                     Use admin@example.com / admin for demo
-                </CardFooter>
+                </CardFooter> */}
             </Card>
         </div>
     );
