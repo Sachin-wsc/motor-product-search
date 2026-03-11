@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { getImageUrl } from "@/lib/image-utils";
 
 
 export const dynamic = "force-dynamic";
@@ -87,7 +88,7 @@ export default async function CatalogPage({
                         <Card key={product.id} className="flex flex-col group overflow-hidden border-secondary/20 hover:border-primary/40 transition-all hover:shadow-lg">
                             <div className="aspect-video w-full bg-secondary/20 flex items-center justify-center relative overflow-hidden">
                                 {product.images && product.images.length > 0 ? (
-                                    <img src={product.images[0]} alt={product.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
+                                    <img src={getImageUrl(product.images[0])} alt={product.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300" />
                                 ) : (
                                     <div className="text-muted-foreground font-medium">No Image</div>
                                 )}

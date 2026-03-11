@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import InquiryModal from "./inquiry-modal";
+import { getImageUrl } from "@/lib/image-utils";
 
 export default async function ProductDetails({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
@@ -31,7 +32,7 @@ export default async function ProductDetails({ params }: { params: Promise<{ id:
                 <div className="space-y-4">
                     <div className="aspect-square bg-white rounded-xl border border-secondary/20 shadow-sm flex items-center justify-center p-8 overflow-hidden">
                         {product.images && product.images.length > 0 ? (
-                            <img src={product.images[0]} alt={product.name} className="w-full h-full object-contain" />
+                            <img src={getImageUrl(product.images[0])} alt={product.name} className="w-full h-full object-contain" />
                         ) : (
                             <div className="text-muted-foreground/50 text-xl font-medium">Image Preview Unavailable</div>
                         )}
@@ -40,7 +41,7 @@ export default async function ProductDetails({ params }: { params: Promise<{ id:
                         <div className="grid grid-cols-4 gap-4">
                             {product.images.slice(1).map((imgUrl: string, idx: number) => (
                                 <div key={idx} className="aspect-square bg-white rounded border border-secondary/20 p-2 flex items-center justify-center">
-                                    <img src={imgUrl} alt={`${product.name} ${idx + 1}`} className="max-w-full max-h-full object-contain" />
+                                    <img src={getImageUrl(imgUrl)} alt={`${product.name} ${idx + 1}`} className="max-w-full max-h-full object-contain" />
                                 </div>
                             ))}
                         </div>

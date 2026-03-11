@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import CreatableSelect from 'react-select/creatable';
 import { useDropzone } from 'react-dropzone';
 import { X } from "lucide-react";
+import { getImageUrl } from "@/lib/image-utils";
 
 import * as yup from "yup";
 
@@ -416,7 +417,7 @@ export default function EditProductModal({
                                 {existingImages.map((imageUrl, index) => (
                                     <div key={imageUrl} className="relative group aspect-square rounded-md overflow-hidden border border-gray-200">
                                         <img
-                                            src={imageUrl}
+                                            src={getImageUrl(imageUrl)}
                                             className="w-full h-full object-cover"
                                             alt={`Existing Preview ${index}`}
                                         />
